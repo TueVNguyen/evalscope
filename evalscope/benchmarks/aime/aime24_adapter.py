@@ -18,7 +18,6 @@ logger = get_logger()
     train_split=None,
     eval_split='train',  # Only train set is available
     prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
-    dataset_hub=HubType.HUGGINGFACE,
 )
 class AIME24Adapter(DataAdapter):
 
