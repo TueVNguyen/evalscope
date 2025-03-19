@@ -13,6 +13,7 @@ class Subset:
     name: str = 'default_subset'
     score: float = 0.0
     num: int = 0
+    num_response_per_row: int = 0
 
     def __post_init__(self):
         self.score = normalize_score(self.score)
@@ -68,6 +69,7 @@ class ReportKey:
     subset_name = 'Subset'
     num = 'Num'
     score = 'Score'
+    num_response_per_row = 'SampleSize'
 
 
 @dataclass
@@ -111,6 +113,7 @@ class Report:
                     table[ReportKey.category_name].append(category.name)
                     table[ReportKey.subset_name].append(subset.name)
                     table[ReportKey.num].append(subset.num)
+                    table[ReportKey.num_response_per_row].append(subset.num_response_per_row)
                     table[ReportKey.score].append(subset.score)  # TODO: convert to percentage
             # NOTE: only flatten metrics if needed, use the first metric by default
             if not flatten_metrics:

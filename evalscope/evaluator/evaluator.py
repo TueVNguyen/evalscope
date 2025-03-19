@@ -373,8 +373,8 @@ class Evaluator(object):
             try:
                 report_table: str = gen_table([self.outputs_structure.reports_dir])
                 logger.info(f'Report table: \n{report_table} \n')
-            except Exception:
-                logger.error('Failed to generate report table.')
+            except Exception as e:
+                logger.error(f'Failed to generate report table: {e}')
         return report_map
 
     def eval(self, **kwargs) -> dict:

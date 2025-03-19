@@ -227,6 +227,8 @@ def strip_answer_string(string):
 
 
 def extract_answer(pred_str, use_last_number=True):
+    if pred_str is None:
+        return pred_str
     pred_str = pred_str.replace('\u043a\u0438', '')
     if 'final answer is $' in pred_str and '$. I hope' in pred_str:
         # minerva_math

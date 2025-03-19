@@ -41,6 +41,7 @@ class ReportGenerator:
                             score=score_item['score'],
                             num=score_item['num'],
                             metric_name=score_item['metric_name'],
+                            num_response_per_row=score_item['num_response_per_row'],
                             categories=tuple(categories)))
             df = pd.DataFrame(subsets)
             return df
@@ -53,7 +54,7 @@ class ReportGenerator:
             for category_name, group_category in group_metric.groupby('categories'):
                 subsets = []
                 for _, row in group_category.iterrows():
-                    subsets.append(Subset(name=row['name'], score=row['score'], num=row['num']))
+                    subsets.append(Subset(name=row['name'], score=row['score'], num=row['num'], num_response_per_row=row['num_response_per_row']))
 
                 categories.append(Category(name=category_name, subsets=subsets))
 
@@ -70,7 +71,8 @@ class ReportGenerator:
             for (dataset_name, subset_name), group_subset in group_category.groupby(['dataset_name', 'subset_name']):
                 avg_score = group_subset['score'].mean()
                 num = group_subset['score'].count()
-                subsets.append(Subset(name=f'{dataset_name}/{subset_name}', score=float(avg_score), num=int(num)))
+                num_response_per_row = group_subset['num_response_per_row'].mean()
+                subsets.append(Subset(name=f'{dataset_name}/{subset_name}', score=float(avg_score), num=int(num), num_response_per_row=num_response_per_row))
 
             categories.append(Category(name=category_name, subsets=subsets))
         return Report(

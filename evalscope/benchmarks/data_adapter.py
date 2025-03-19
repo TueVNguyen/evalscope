@@ -252,7 +252,13 @@ class DataAdapter(ABC):
                 review_res = review_res_list.get(metric_name, [])
             else:
                 review_res = review_res_list
-            res_list.append({'metric_name': metric_name, 'score': metric_func(review_res), 'num': len(review_res)})
+            num_response_per_row = [len(item) if isinstance(item, list) else 1 for item in review_res]
+            if len(set(num_response_per_row)) == 1:
+                num_response_per_row = num_response_per_row[0]
+            else:
+                num_response_per_row = list(set(num_response_per_row))[:4] 
+                num_response_per_row = str(num_response_per_row )+ '...'
+            res_list.append({'metric_name': metric_name, 'score': metric_func(review_res), 'num': len(review_res), 'num_response_per_row': num_response_per_row})
         return res_list
 
     def gen_report(self, subset_score_map: dict, report_name: str = None, **kwargs) -> Report:
