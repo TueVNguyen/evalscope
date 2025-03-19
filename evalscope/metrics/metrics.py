@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING, Dict, List, Union
 def mean(arr: list):
     if not arr:
         return 0.0
-
+    print(arr)
     if isinstance(arr[0], list):
         arr = [item for sublist in arr for item in sublist]
     return sum(arr) / len(arr)

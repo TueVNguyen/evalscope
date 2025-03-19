@@ -25,17 +25,17 @@ def run_task(task_cfg: Union[str, dict, TaskConfig, List[TaskConfig], Namespace]
 
     # If task_cfg is a list, run each task individually
     if isinstance(task_cfg, list):
-        return [run_single_task(cfg, run_time) for cfg in task_cfg]
+        return [run_single_task(cfg, run_time, index=index) for index, cfg in enumerate(task_cfg)]
 
     task_cfg = parse_task_config(task_cfg)
     return run_single_task(task_cfg, run_time)
 
 
-def run_single_task(task_cfg: TaskConfig, run_time: str) -> dict:
+def run_single_task(task_cfg: TaskConfig, run_time: str, index: int=-1) -> dict:
     """Run a single evaluation task."""
     if task_cfg.seed is not None:
         seed_everything(task_cfg.seed)
-    outputs = setup_work_directory(task_cfg, run_time)
+    outputs = setup_work_directory(task_cfg, run_time, index)
     configure_logging(task_cfg.debug, os.path.join(outputs.logs_dir, 'eval_log.log'))
 
     if task_cfg.eval_backend != EvalBackend.NATIVE:
@@ -44,7 +44,7 @@ def run_single_task(task_cfg: TaskConfig, run_time: str) -> dict:
         return evaluate_model(task_cfg, outputs)
 
 
-def setup_work_directory(task_cfg: TaskConfig, run_time: str):
+def setup_work_directory(task_cfg: TaskConfig, run_time: str, index: int=-1):
     """Set the working directory for the task."""
     # use cache
     if task_cfg.use_cache:
@@ -52,7 +52,10 @@ def setup_work_directory(task_cfg: TaskConfig, run_time: str):
         logger.info(f'Set resume from {task_cfg.work_dir}')
     # elif are_paths_same(task_cfg.work_dir, DEFAULT_WORK_DIR):
     else:
-        task_cfg.work_dir = os.path.join(task_cfg.work_dir, run_time)
+        if index == -1:
+            task_cfg.work_dir = os.path.join(task_cfg.work_dir, run_time)
+        else:
+            task_cfg.work_dir = os.path.join(task_cfg.work_dir, run_time, str(index))
 
     outputs = OutputsStructure(outputs_dir=task_cfg.work_dir)
 
