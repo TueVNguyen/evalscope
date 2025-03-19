@@ -6,7 +6,7 @@ import os
 from argparse import Namespace
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional, Union
-
+from copy import deepcopy
 from evalscope.config import TaskConfig, parse_task_config
 from evalscope.constants import DataCollection, EvalBackend
 from evalscope.utils import seed_everything
@@ -35,6 +35,7 @@ def run_single_task(task_cfg: TaskConfig, run_time: str, index: int=-1) -> dict:
     """Run a single evaluation task."""
     if task_cfg.seed is not None:
         seed_everything(task_cfg.seed)
+    task_cfg = deepcopy(task_cfg)
     outputs = setup_work_directory(task_cfg, run_time, index)
     configure_logging(task_cfg.debug, os.path.join(outputs.logs_dir, 'eval_log.log'))
 
