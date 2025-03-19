@@ -2,25 +2,26 @@ from evalscope.benchmarks import Benchmark, DataAdapter
 from evalscope.constants import OutputType
 from evalscope.metrics.math_parser import extract_answer, math_equal, strip_answer_string
 from evalscope.utils.logger import get_logger
+import os
 from evalscope.constants import HubType
 # flake8: noqa
 
 logger = get_logger()
-
+# HOME_DIR = os.path.expanduser('~')
 
 @Benchmark.register(
-    name='aime24',
-    pretty_name='AIME-2024',
-    dataset_id='HuggingFaceH4/aime_2024',
+    name='amc23',
+    pretty_name='AMC 23',
+    dataset_id='tuenguyen/eval_math_amc23',
     subset_list=['default'],
     metric_list=['AveragePass@1', 'TopK'],
-    few_shot_num=0,
+    few_shot_num=0, 
     train_split=None,
     eval_split='train',  # Only train set is available
     prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
     dataset_hub=HubType.HUGGINGFACE,
 )
-class AIME24Adapter(DataAdapter):
+class AMC23Adapter(DataAdapter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

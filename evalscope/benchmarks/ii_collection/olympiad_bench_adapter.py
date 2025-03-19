@@ -2,16 +2,17 @@ from evalscope.benchmarks import Benchmark, DataAdapter
 from evalscope.constants import OutputType
 from evalscope.metrics.math_parser import extract_answer, math_equal, strip_answer_string
 from evalscope.utils.logger import get_logger
+import os
 from evalscope.constants import HubType
 # flake8: noqa
 
 logger = get_logger()
-
+# HOME_DIR = os.path.expanduser('~')
 
 @Benchmark.register(
-    name='aime24',
-    pretty_name='AIME-2024',
-    dataset_id='HuggingFaceH4/aime_2024',
+    name='olympiad_bench',
+    pretty_name='Olympiad Bench',
+    dataset_id='tuenguyen/eval_math_olympiadbench',
     subset_list=['default'],
     metric_list=['AveragePass@1', 'TopK'],
     few_shot_num=0,
@@ -20,7 +21,7 @@ logger = get_logger()
     prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
     dataset_hub=HubType.HUGGINGFACE,
 )
-class AIME24Adapter(DataAdapter):
+class OlympiadBenchAdapter(DataAdapter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -36,14 +37,17 @@ class AIME24Adapter(DataAdapter):
 
     def get_gold_answer(self, input_d: dict) -> str:
         # Extract the gold answer from the input dict.
-        return strip_answer_string(input_d['answer'])
+        answer = input_d['answer']
+        if len(answer) >= 3 and answer[0] == '$' and answer[-1] == '$':
+            answer = answer[1:-1]
+        return answer
 
     def parse_pred_result(self, result: str, raw_input_d: dict = None, eval_type: str = 'checkpoint') -> str:
         """
         Parse the model output to get the answer. Could be the best choice index.
         """
         # Note: Use same extraction method for both of checkpoint/service/custom
-        result = strip_answer_string(extract_answer(result))
+        result = strip_answer_string(extract_answer(str(result)))
         return result
 
     def match(self, gold: str, pred: str) -> float:

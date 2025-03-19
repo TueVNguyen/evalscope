@@ -53,6 +53,10 @@ class Evaluator(object):
         self.model_cfg = model_adapter.model_cfg
         self.eval_type = task_cfg.eval_type
         self.dataset_hub = task_cfg.dataset_hub
+        logger.info(f"dataset_hub from data_adapter {data_adapter.dataset_hub} and task_cfg {task_cfg.dataset_hub} are different")
+        if data_adapter.dataset_hub != task_cfg.dataset_hub:
+            logger.warning(f"dataset_hub from data_adapter {data_adapter.dataset_hub} and task_cfg {task_cfg.dataset_hub} are different")
+            self.dataset_hub = data_adapter.dataset_hub
         self.stage = task_cfg.stage
         self.use_cache = task_cfg.use_cache
         self.task_cfg = task_cfg

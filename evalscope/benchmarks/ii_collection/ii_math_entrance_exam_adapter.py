@@ -2,25 +2,26 @@ from evalscope.benchmarks import Benchmark, DataAdapter
 from evalscope.constants import OutputType
 from evalscope.metrics.math_parser import extract_answer, math_equal, strip_answer_string
 from evalscope.utils.logger import get_logger
+import os
 from evalscope.constants import HubType
 # flake8: noqa
 
 logger = get_logger()
-
+# HOME_DIR = os.path.expanduser('~')
 
 @Benchmark.register(
-    name='aime24',
-    pretty_name='AIME-2024',
-    dataset_id='HuggingFaceH4/aime_2024',
+    name='ii_math_entrance_exam',
+    pretty_name='II Math Entrance Exam',
+    dataset_id='Intelligent-Internet/Math-Bench-final',
     subset_list=['default'],
     metric_list=['AveragePass@1', 'TopK'],
-    few_shot_num=0,
+    few_shot_num=0, 
     train_split=None,
     eval_split='train',  # Only train set is available
     prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
     dataset_hub=HubType.HUGGINGFACE,
 )
-class AIME24Adapter(DataAdapter):
+class MathGakaoEnAdapter(DataAdapter):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,14 +30,14 @@ class AIME24Adapter(DataAdapter):
         """
         Generate the prompt for the model input.
         """
-        problem = input_d['problem']
+        problem = input_d['problem_translation']
         full_prompt = self.prompt_template.format(query=problem)
 
         return self.gen_prompt_data(full_prompt)
 
     def get_gold_answer(self, input_d: dict) -> str:
         # Extract the gold answer from the input dict.
-        return strip_answer_string(input_d['answer'])
+        return strip_answer_string(input_d['final_answer'])
 
     def parse_pred_result(self, result: str, raw_input_d: dict = None, eval_type: str = 'checkpoint') -> str:
         """

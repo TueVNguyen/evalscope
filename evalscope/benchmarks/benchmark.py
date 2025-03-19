@@ -4,6 +4,7 @@ from dataclasses import dataclass, field, fields
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from evalscope.constants import OutputType
+from evalscope.constants import HubType
 
 if TYPE_CHECKING:
     from evalscope.benchmarks import DataAdapter
@@ -30,6 +31,7 @@ class BenchmarkMeta:
     pretty_name: Optional[str] = None
     filters: Optional[OrderedDict] = None
     extra_params: Optional[Dict] = field(default_factory=dict)
+    dataset_hub: Optional[HubType] = HubType.MODELSCOPE
 
     def _update(self, args: dict):
         if args.get('local_path'):

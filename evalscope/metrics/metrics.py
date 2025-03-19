@@ -20,6 +20,15 @@ def mean(arr: list):
         arr = [item for sublist in arr for item in sublist]
     return sum(arr) / len(arr)
 
+def top_k(arr: Union[List[int], List[List[int]]]) -> float:
+    if not arr:
+        return 0.0
+
+
+    if isinstance(arr[0], list):
+        return sum(max(sub_arr) for sub_arr in arr) / len(arr)
+    else:
+        return sum(arr) / len(arr)
 
 def pass_at_k(arr: Union[List[int], List[List[int]]], k: int = 1) -> float:
     if not arr:

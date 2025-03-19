@@ -31,6 +31,7 @@ class DataAdapter(ABC):
                  system_prompt: Optional[str] = None,
                  query_template: Optional[str] = None,
                  pretty_name: Optional[str] = None,
+                 dataset_hub: Optional[HubType] = HubType.MODELSCOPE,
                  **kwargs):
         """
         Data Adapter for the benchmark. You need to implement the following methods:
@@ -66,6 +67,7 @@ class DataAdapter(ABC):
         self.llm_as_a_judge = llm_as_a_judge
         self.category_map = kwargs.get('category_map', {})
         self.choices = kwargs.get('choices', None)
+        self.dataset_hub = dataset_hub
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -89,6 +91,8 @@ class DataAdapter(ABC):
 
         """
         dataset_name_or_path = os.path.expanduser(dataset_name_or_path or self.dataset_id)
+        logger.info(dataset_name_or_path)
+        logger.info("here 2")
         subset_list = subset_list or self.subset_list
 
         # Try to load dataset from local disk
@@ -136,12 +140,18 @@ class DataAdapter(ABC):
                 data_dict[sub_name] = {}
                 # e.g. train: few-shot, test: target dataset to evaluate
                 for split in split_list:
-                    dataset = MsDataset.load(
-                        dataset_name=dataset_name_or_path,
-                        subset_name=sub_name,
-                        split=split,
-                        cache_dir=work_dir,
-                        hub=datasets_hub,
+                    logger.info(dataset_name_or_path)
+                    logger.info(f"here 4, {datasets_hub} {kwargs}")
+                    if datasets_hub == HubType.HUGGINGFACE:
+                        from datasets import load_dataset
+                        dataset = load_dataset(dataset_name_or_path, sub_name, split=split, cache_dir=work_dir, **kwargs)
+                    else:
+                        dataset = MsDataset.load(
+                            dataset_name=dataset_name_or_path,
+                            subset_name=sub_name,
+                            split=split,
+                            cache_dir=work_dir,
+                            hub=datasets_hub,
                         **kwargs)
                     data_dict[sub_name].update({split: dataset})
 
