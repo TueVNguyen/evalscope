@@ -8,6 +8,8 @@ from typing import List, Optional, Union
 from evalscope.models.base_adapter import BaseModelAdapter
 from evalscope.models.register import register_model_adapter
 from evalscope.utils.logger import get_logger
+from copy import deepcopy
+from concurrent.futures import ThreadPoolExecutor
 
 logger = get_logger()
 
@@ -36,7 +38,7 @@ class ServerModelAdapter(BaseModelAdapter):
         self.supported_params = self._get_supported_params()
 
         self.seed = kwargs.get('seed', None)
-        self.timeout = kwargs.get('timeout', 60)
+        self.timeout = kwargs.get('timeout', 10000)
         self.stream = kwargs.get('stream', False)
         self.model_cfg = {'api_url': api_url, 'model_id': model_id, 'api_key': api_key}
         super().__init__(model=None, model_cfg=self.model_cfg, **kwargs)
@@ -45,7 +47,7 @@ class ServerModelAdapter(BaseModelAdapter):
         sig = signature(self.client.chat.completions.create)
         return list(sig.parameters.keys())
 
-    def predict(self, inputs: List[dict], infer_cfg: dict = None) -> List[dict]:
+    def predict(self, inputs: List[dict], infer_cfg: dict = None, logging=False) -> List[dict]:
         """
         Model prediction func.
 
@@ -58,10 +60,34 @@ class ServerModelAdapter(BaseModelAdapter):
         """
         infer_cfg = infer_cfg or {}
         results = []
+        assert len(inputs) == 1, "Server model adapter only supports single input"
+        n = infer_cfg.get('n', 1)
+        if n!=1:
+            # we create multi process here 
+            
+            with ThreadPoolExecutor(max_workers=n) as executor:
+                futures = []
+                infer_cfg_copy = deepcopy(infer_cfg)
+                infer_cfg_copy['n'] = 1
+                for i in range(n):
+                    futures.append(executor.submit(self.process_single_input, inputs[0], infer_cfg_copy))
+                results = [future.result() for future in futures]
+                concate_results = {
+                    "id": results[0]['id'],
+                    "choices": [],
+                    "created": results[0]['created'],
+                    "model": results[0]['model'],
+                    "object": results[0]['object'],
+                    "usage": results[0]['usage']
+                }
+                for result in results:
+                    concate_results['choices'].extend(result['choices'])
+                results = [concate_results]
 
-        for input_item in inputs:
-            response = self.process_single_input(input_item, infer_cfg)
-            results.append(response)
+        else:
+            for input_item in inputs:
+                response = self.process_single_input(input_item, infer_cfg)
+                results.append(response)
 
         return results
 
@@ -97,6 +123,7 @@ class ServerModelAdapter(BaseModelAdapter):
         # Format request JSON according to OpenAI API format
         from evalscope.config import DEFAULT_GENERATION_CONFIG
         if infer_cfg == DEFAULT_GENERATION_CONFIG:
+            assert False, "DEFAULT_GENERATION_CONFIG is not supported"
             infer_cfg = {
                 'max_tokens': 2048,
                 'temperature': 0.0,
@@ -104,7 +131,7 @@ class ServerModelAdapter(BaseModelAdapter):
 
         request_json = {'model': self.model_id, 'messages': content, **infer_cfg}
 
-        if self.timeout:
+        if self.timeout and "timeout" not in request_json:
             request_json['timeout'] = self.timeout
 
         if self.stream:

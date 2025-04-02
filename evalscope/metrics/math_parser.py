@@ -4,13 +4,43 @@ The logic in this file largely borrows from Qwen2.5-Math codebase at https://git
 # flake8: noqa
 import re
 import regex
-from latex2sympy2 import latex2sympy
+from latex2sympy2_extended import latex2sympy
 from math import isclose
 from sympy import N, simplify
 from sympy.parsing.latex import parse_latex
 from sympy.parsing.sympy_parser import parse_expr
 from word2number import w2n
+from evalscope.utils.timeout import timeout
+from .deepscaler.reward_types import RewardConfig, RewardFn, RewardInput, RewardOutput, RewardType
+from .deepscaler.math_reward import RewardMathFn
 
+def get_last_boxed(text: str):
+    """Extract the last boxed expression (\\boxed{...}) from the text.
+
+    Args:
+        text (str): The text to check
+
+    Returns:
+        str: The last boxed expression, or None if not found
+    """
+    start_idx = text.rfind("\\boxed")
+    if start_idx < 0:
+        return None
+
+    right_brace_idx = None
+    num_left_braces_open = 0
+    for i in range(start_idx, len(text)):
+        if text[i] == "{":
+            num_left_braces_open += 1
+        if text[i] == "}":
+            num_left_braces_open -= 1
+            if num_left_braces_open == 0:
+                right_brace_idx = i
+                break
+
+    if not right_brace_idx:
+        return None
+    return text[start_idx : right_brace_idx + 1]
 
 def convert_word_number(text: str) -> str:
     try:
@@ -234,8 +264,9 @@ def extract_answer(pred_str, use_last_number=True):
         # minerva_math
         tmp = pred_str.split('final answer is $', 1)[1]
         pred = tmp.split('$. I hope', 1)[0].strip()
-    elif 'boxed' in pred_str:
-        ans = pred_str.split('boxed')[-1]
+    elif 'oxed' in pred_str: # sometimes model output is like this: oxed{...} due to prompt \boxed{...}
+        
+        ans = pred_str.split('oxed')[-1]
         if len(ans) == 0:
             return ''
         elif ans[0] == '{':
@@ -282,7 +313,7 @@ def extract_answer(pred_str, use_last_number=True):
         pred = pred[:-1]
     if pred != '' and pred[-1] == '/':
         pred = pred[:-1]
-    pred = strip_answer_string(pred)
+    pred = strip_answer_string(pred)#[-1000:]
     return pred
 
 
@@ -334,6 +365,7 @@ def str_to_pmatrix(input_str):
     return ', '.join(pmatrix_list)
 
 
+@timeout(timeout_seconds=2)
 def math_equal(
     prediction,
     reference,
@@ -343,13 +375,18 @@ def math_equal(
 ) -> bool:
     """
     Exact match of math if and only if:
+    0. We keep the last 400 characters of the prediction and reference
     1. numerical equal: both can convert to float and are equal
     2. symbolic equal: both can convert to sympy expression and are equal
     """
+    if len(prediction.strip()) == 0:
+        return False
     if prediction is None or reference is None:
         return False
     if str(prediction.strip().lower()) == str(reference.strip().lower()):
         return True
+    prediction = str(prediction).strip()[-300:]
+    reference = str(reference).strip()[-300:]
     if (reference in ['A', 'B', 'C', 'D', 'E'] and choice_answer_clean(prediction) == reference):
         return True
 
@@ -526,3 +563,32 @@ def symbolic_equal(a, b):
         pass
 
     return False
+
+
+def math_verify_boxed(prediction, reference):
+    if len(prediction.strip()) == 0:
+        return False
+    import math_verify
+    parsed_prediction = math_verify.parse(prediction)
+    parsed_ground_truth = math_verify.parse("\\boxed{" + reference + "}")
+    verified = math_verify.verify(parsed_prediction, parsed_ground_truth)
+    return verified
+
+@timeout(timeout_seconds=2)
+def deepscaler_verify(prediction, reference):
+    reward_config = RewardConfig()
+    reward_config.use_math_orm = False
+    reward_config.skip_format_reward = True
+    prediction = "\\\\boxed{" + prediction + "}"
+    reward = RewardMathFn(reward_config)
+    input = RewardInput(problem=prediction, problem_type=RewardType.MATH, model_response=prediction, ground_truth={"answer": reference})
+    try:
+        output = reward(input)
+        is_correct = output.is_correct 
+        return int(is_correct)
+    except Exception as e:
+        return False
+
+    
+
+

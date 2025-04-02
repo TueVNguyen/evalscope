@@ -1,6 +1,6 @@
 from evalscope.benchmarks import Benchmark, DataAdapter
 from evalscope.constants import OutputType
-from evalscope.metrics.math_parser import extract_answer, math_equal, strip_answer_string
+from evalscope.metrics.math_parser import extract_answer, math_equal, strip_answer_string, get_last_boxed, deepscaler_verify, math_verify_boxed
 from evalscope.utils.logger import get_logger
 from evalscope.constants import HubType
 # flake8: noqa
@@ -17,7 +17,8 @@ logger = get_logger()
     few_shot_num=0,
     train_split=None,
     eval_split='train',  # Only train set is available
-    prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
+    prompt_template='{query}\n\nPlease reason step by step, and put your final answer within \\\\boxed{{}}.',
+    dataset_hub=HubType.HUGGINGFACE,
 )
 class AIME24Adapter(DataAdapter):
 
@@ -37,13 +38,49 @@ class AIME24Adapter(DataAdapter):
         # Extract the gold answer from the input dict.
         return strip_answer_string(input_d['answer'])
 
+    def extract_boxed(self, result: str) -> str:
+        """
+        Extract the boxed answer from the result.
+        """
+
+        str_boxed = get_last_boxed(result)
+        return str_boxed
+
     def parse_pred_result(self, result: str, raw_input_d: dict = None, eval_type: str = 'checkpoint') -> str:
         """
         Parse the model output to get the answer. Could be the best choice index.
         """
         # Note: Use same extraction method for both of checkpoint/service/custom
-        result = strip_answer_string(extract_answer(result))
-        return result
+        extract_boxed_result = get_last_boxed(result) 
+        if extract_boxed_result is  None:
+            print(f"no boxed result for {result[-50:]}\n--------------------------------")
+            return ""
+        return extract_boxed_result
 
     def match(self, gold: str, pred: str) -> float:
-        return math_equal(pred, gold)
+        correct = 0 
+        math_verify_result = 0 
+        deepscaler_result = 0 
+        try:
+            # import ipdb; ipdb.set_trace()
+            if len(pred.strip()) == 0:
+                return 0 
+            try:
+                math_verify_result = math_verify_boxed(pred, gold) 
+                
+            except Exception as e:
+                print(f"Error matching math_verify_boxed {pred} and {gold}: {e}")
+                pass
+            try:
+                deepscaler_result = deepscaler_verify(pred, gold)
+        
+            except Exception as e:
+                print(f"Error matching deepscaler_verify {pred} and {gold}: {e}")
+                pass
+            correct = math_equal(pred, gold)
+        except Exception as e:
+            logger.error(f"Error matching {pred} and {gold}: {e}")
+        if int(math_verify_result) + int(deepscaler_result) + int(correct) not in [0, 3]:
+            logger.warning(f"math_verify_result {math_verify_result} deepscaler_result {deepscaler_result} correct {correct}: {pred} {gold}")
+        # logger.info(f"{math_verify_result} {deepscaler_result} {correct}")
+        return int(int(correct) + int(math_verify_result) + int(deepscaler_result) > 0 )

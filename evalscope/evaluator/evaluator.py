@@ -113,12 +113,40 @@ class Evaluator(object):
             answers_list.append(processed_answer)
         return answers_list
 
+    def _predict(self, input_prompts, infer_cfg, index):
+        answer_ds: List[dict] = self.model_adapter.predict(inputs=input_prompts, infer_cfg=infer_cfg)
+        return answer_ds[0], index
+
+    def _get_answer_with_predict(self, answer_ds, input_prompts, subset_name, infer_cfg):
+        answers_list = []
+        for answer_d, input_prompt in zip(answer_ds, input_prompts):
+            answer_id = self._generate_answer_id(self.model_adapter.model_cfg, input_prompt, infer_cfg)
+            processed_answer = self._process_answer(answer_d, input_prompt, subset_name, answer_id)
+            answers_list.append(processed_answer)
+        return answers_list
+    
+    def combine_results(self, results):
+        concate_results = {
+                    "id": results[0]['id'],
+                    "choices": [],
+                    "created": results[0]['created'],
+                    "model": results[0]['model'],
+                    "object": results[0]['object'],
+                    "usage": results[0]['usage']
+                }
+        for result in results:
+            concate_results['choices'].extend(result['choices'])
+        results = [concate_results]
+        return results
+    
     @staticmethod
     def filter_answer(use_cache, prompts_list, pred_file_path) -> dict:
         # Filter prompts that have been answered
         answers_list = []
         if not use_cache or not os.path.exists(pred_file_path):
             return answers_list, prompts_list
+        logger.info(f"Reusing predictions from {pred_file_path}")
+        # assert False, f"Not implemented {use_cache} {pred_file_path} {os.path.exists(pred_file_path)}"
 
         def get_answered_indices(answers_list: List[Dict]) -> List[int]:
             indices = [answer[AnswerKeys.ORIGIN_PROMPT].get('index') for answer in answers_list]
@@ -169,16 +197,38 @@ class Evaluator(object):
 
         eval_batch_size = self.task_cfg.eval_batch_size
         if self.task_cfg.eval_type == EvalType.SERVICE:
-            with tqdm(total=len(prompts_list), desc=f'Predicting({subset_name}): ') as pbar:
+            n = infer_cfg.get("n", 1) 
+            with tqdm(total=int(len(prompts_list) * n), desc=f'Predicting({subset_name}): [{len(prompts_list)} * {n}]={len(prompts_list) * n}') as pbar:
                 with ThreadPoolExecutor(max_workers=eval_batch_size) as executor:
                     futures = []
+                    
+                    infer_cfg_copy = deepcopy(infer_cfg)
+                    infer_cfg_copy['n'] = 1
+                    index = 0
                     for input_prompt in prompts_list:
-                        futures.append(executor.submit(self._get_answer, [input_prompt], subset_name, infer_cfg))
+                        for i in range(n):
+                            futures.append(executor.submit(self._predict, [input_prompt], infer_cfg_copy, index))
+                            index += 1
+  
+                    results_dict = [None for _ in range(len(prompts_list) * n)]
                     for future in as_completed(futures):
-                        answer_ds: List[dict] = future.result()
+                        res: List[dict] = future.result()
+                        answer_ds, index = res
+                        results_dict[index] = answer_ds
+                      
+                        pbar.update(1)
+                    for index in range(0, len(results_dict), n):
+                        data = self.combine_results(results_dict[index:index+n])
+                        prompt = [
+                            prompts_list[index // n]
+                        ]
+                        answer_ds = self._get_answer_with_predict(data, prompt, subset_name, infer_cfg)
                         answers_list.extend(answer_ds)
                         dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
-                        pbar.update(len(answer_ds))
+                        
+
+
+     
         else:
             batch_prompts_list = [
                 prompts_list[i:i + eval_batch_size] for i in range(0, len(prompts_list), eval_batch_size)
@@ -282,7 +332,7 @@ class Evaluator(object):
         review_file_name = self.dataset_name + '_' + subset_name + '.jsonl'
         review_file_path = os.path.join(self.outputs_structure.reviews_dir, self.model_name, review_file_name)
         os.makedirs(os.path.dirname(review_file_path), exist_ok=True)
-
+        logger.info(f'review_file_path: {review_file_path}')
         if self.use_cache and os.path.exists(review_file_path):
             logger.warning(f'Ignore use_cache={self.use_cache}, updating the review file: {review_file_path} ...')
             os.remove(review_file_path)
@@ -290,21 +340,31 @@ class Evaluator(object):
         def process_single_review(answer_d):
             review_id, reviewer_spec = self._generate_review_id(answer_d)
             # Get review
+            # import ipdb; ipdb.set_trace()
             review_d = self._get_review(answer_d=answer_d, review_id=review_id, reviewer_spec=reviewer_spec)
             logger.debug(review_d)
             return review_d
-
-        with ThreadPoolExecutor(max_workers=self.task_cfg.judge_worker_num) as executor:
-            # Submit all tasks and get futures
-            futures = [executor.submit(process_single_review, answer_d) for answer_d in answers_list]
+#        self.task_cfg.judge_worker_num = 1
+        if self.task_cfg.judge_worker_num == 1:
+            for answer_d in tqdm(answers_list, desc=f'Reviewing({subset_name}): '):
+                review_d = process_single_review(answer_d)
+                reviews_list.append(review_d)
+                # Dump reviews
+                # print("save results")
+                dump_jsonl_data(review_d, review_file_path, dump_mode=DumpMode.APPEND)
+                # print("save done")
+        else:
+            with ThreadPoolExecutor(max_workers=self.task_cfg.judge_worker_num) as executor:
+                futures = [executor.submit(process_single_review, answer_d) for answer_d in answers_list]
 
             # Process completed futures with progress bar
-            for future in tqdm(as_completed(futures), total=len(futures), desc=f'Reviewing({subset_name}): '):
+            for future in tqdm(as_completed(futures, timeout=256), total=len(futures), desc=f'Reviewing({subset_name}): '):
                 review_d = future.result()
                 reviews_list.append(review_d)
                 # Dump reviews
+                # print("save results")
                 dump_jsonl_data(review_d, review_file_path, dump_mode=DumpMode.APPEND)
-
+                # print("save done")
         return reviews_list
 
     def compute_metrics(self, reviews_list: List[dict]) -> List[dict]:
@@ -408,7 +468,7 @@ class Evaluator(object):
 
         prompts = self.load_dataset()
         for subset_name, prompts_list in prompts.items():
-
+            
             answers_list: list = self.get_answers(
                 subset_name=subset_name, prompts_list=prompts_list, infer_cfg=self.task_cfg.generation_config, **kwargs)
             if self.stage == EvalStage.INFER:

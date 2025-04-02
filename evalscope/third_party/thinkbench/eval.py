@@ -70,7 +70,7 @@ class EvalThink:
         results = []
         for choice in item['choices']:
             results.append(self.process_choice(choice, problem))
-            break  # only process the first choice
+            #break  # only process the first choice
 
         total_tokens, switch_counts, useful_tokens, reflection_tokens, scores = zip(*results)
 
@@ -147,7 +147,7 @@ class EvalThink:
                             shared_xaxes=True, x_title='Subsets',
                             vertical_spacing=0.1,  # Decrease vertical spacing between subplots
                             horizontal_spacing=0.1)  # Decrease horizontal spacing between subplots
-
+        fig.update_layout(plot_bgcolor="gray")
         metrics_order = ['reasoning_tokens', 'first_correct_tokens', 'reflection_tokens',
                         'token_efficiency', 'thought_num', 'accuracy']
 
@@ -177,7 +177,12 @@ class EvalThink:
         fig.update_layout(
             height=800,  # Adjust height for 2x3 layout
             width=1200,   # Adjust width for 2x3 layout
-            title_text=f'Evaluation Metrics for {self.model_name} on {self.dataset_name}',
+            # title_text=f'Evaluation Metrics for {self.model_name} on {self.dataset_name}',
+            # title_x=0.5,
+            title={
+                "text":f'Evaluation Metrics for {self.model_name} on {self.dataset_name}',
+                'xanchor': 'center'
+            },
             legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1)
         )
 
@@ -215,7 +220,7 @@ class EvalThink:
         return df[bools].head(count)
 
 
-    def evaluate(self, output_dir, max_tokens=8000, count=50, workers=128):
+    def evaluate(self, output_dir, max_tokens=8000, count=50, workers=32):
         for subset in self.subsets:
             review_path = os.path.join(self.report_path, 'reviews', self.model_name, f'{self.dataset_name}_{subset}.jsonl')
             review_df = pd.read_json(review_path, lines=True)
@@ -254,7 +259,7 @@ def run_task(config, output_dir='outputs', max_tokens=8000, count=50, workers=12
     results = evaluator.evaluate(output_dir, max_tokens, count, workers)
     print(results)
 
-def combine_results(configs: List[dict], output_path: str):
+def combine_results(configs: List[dict], output_path: str, model_names: List[str]):
     """
     Combine evaluation results from multiple model configs into one plot.
     All models' results for the same metric will be shown in the same subplot for easy comparison.
@@ -273,17 +278,25 @@ def combine_results(configs: List[dict], output_path: str):
 
     # Create a 2x3 subplot layout, one subplot per metric
     fig = make_subplots(rows=2, cols=3,
-                       subplot_titles=('Reasoning Tokens', 'First Correct Tokens', 'Reflection Tokens',
-                                     'Token Efficiency', 'Thought Num', 'Accuracy'),
-                       shared_xaxes=True, x_title='Subsets',
+                       subplot_titles=(
+                            '<b>Reasoning Tokens</b>', '<b>First Correct Tokens</b>', '<b>Reflection Tokens</b>',
+                            '<b>Token Efficiency</b>', '<b>Thought Num</b>', '<b>Accuracy</b>'
+                        ),
+                       shared_xaxes=True, x_title='<b>Subsets</b>',
                        vertical_spacing=0.08,  # 减小垂直间距
-                       horizontal_spacing=0.05)  # 减小水平间距
-
+                       horizontal_spacing=0.05,
+                       )  # 减小水平间距
+    # fig.update_layout(plot_bgcolor="white")
+    fig.update_layout(
+                        # paper_bgcolor="#f5f0f0",  # Main figure background
+                        plot_bgcolor="#ededed",    # Default subplot background
+                        #font_color="black"      # Change font color to white for better visibility on dark background
+                        )
     metrics_order = ['reasoning_tokens', 'first_correct_tokens', 'reflection_tokens',
                     'token_efficiency', 'thought_num', 'accuracy']
 
     # Assign different colors for each model
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
+    colors = ['#632AF5', '#F4A4D2', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
 
     # Plot each metric in a separate subplot
     for i, metric in enumerate(metrics_order, start=1):
@@ -296,14 +309,15 @@ def combine_results(configs: List[dict], output_path: str):
         # Add all models' data for this metric to the same subplot
         for j, (model_name, results) in enumerate(combined_results.items()):
             y_values = [results[metric][subset] for subset in subsets]
-
+            model_name = model_names[model_name]
             fig.add_trace(
                 go.Scatter(x=subsets, y=y_values,
                           mode='lines+markers',
                           name=model_name,  # Just model name since metrics are shown in subplot titles
                           line=dict(color=colors[j % len(colors)]),
                           showlegend=(i == 1)),  # Only show legend for first metric
-                row=row, col=col
+                          row=row, col=col,
+
             )
 
             # Add value annotations
@@ -324,14 +338,15 @@ def combine_results(configs: List[dict], output_path: str):
         # elif metric == 'accuracy':
         #     fig.update_yaxes(range=[0.8, 1], row=row, col=col)
 
-        fig.update_yaxes(title_text=metric.replace('_', ' ').title(), row=row, col=col)
-
+        fig.update_yaxes(row=row, col=col, linewidth=1.2, linecolor='black', mirror=True)
+        fig.update_xaxes(row=row, col=col, linewidth=1.2, linecolor='black', mirror=True, tickfont=dict(size=14, family="Arial", color="black", weight="bold"))
+        
     # Update layout
     fig.update_layout(
         height=1000,  # 增加高度
         width=1500,   # 增加宽度
-        title_text=f'Model Comparison Across Evaluation Metrics on MATH-500',
-        title=dict(font=dict(size=22)),  # 增大标题字号
+        title_text=f'<b>Model Comparison Across Evaluation Metrics on MATH-500</b>',
+        title=dict(font=dict(size=22), xanchor= 'center', x=0.5),  # 增大标题字号
         font=dict(size=14),  # 增大整体字号
         legend=dict(
             orientation='h',
@@ -339,10 +354,11 @@ def combine_results(configs: List[dict], output_path: str):
             y=1.02,
             xanchor='right',
             x=1,
-            font=dict(size=14)  # 增大图例字号
+            font=dict(size=14, family="Arial", color="black", weight="bold")  # 增大图例字号
         )
     )
-
+    # for annotation in fig['layout']['annotations']:
+    #     annotation['font'] = dict(size=16, family="Arial", color="black", weight="bold")  # 增大子图标题字号并加粗
     # Save plot
     os.makedirs('outputs', exist_ok=True)
     fig.write_image(output_path)

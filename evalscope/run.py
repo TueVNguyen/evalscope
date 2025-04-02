@@ -110,7 +110,14 @@ def evaluate_model(task_cfg: TaskConfig, outputs: OutputsStructure) -> dict:
     base_model = get_local_model(task_cfg)
     evaluators = []
     for dataset_name in task_cfg.datasets:
-        evaluator = create_evaluator(task_cfg, dataset_name, outputs, base_model)
+        task_cfg_dataset = deepcopy(task_cfg)
+        # We override the task_cfg for each dataset if need 
+        dataset_args = task_cfg_dataset.dataset_args.get(dataset_name, {})
+        if dataset_args.get("generation_config", None) is not None: 
+            task_cfg_dataset.generation_config = dataset_args["generation_config"]
+        if dataset_args.get("judge_worker_num", None) is not None:
+            task_cfg_dataset.judge_worker_num = dataset_args["judge_worker_num"]
+        evaluator = create_evaluator(task_cfg_dataset, dataset_name, outputs, base_model)
         evaluators.append(evaluator)
 
     # dump task_cfg to outputs.configs_dir after creating evaluators

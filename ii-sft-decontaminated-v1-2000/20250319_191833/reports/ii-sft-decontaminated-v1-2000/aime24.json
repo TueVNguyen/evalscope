@@ -1,0 +1,56 @@
+{
+    "name": "ii-sft-decontaminated-v1-2000_aime24",
+    "dataset_name": "aime24",
+    "model_name": "ii-sft-decontaminated-v1-2000",
+    "score": 0.0797,
+    "metrics": [
+        {
+            "name": "AveragePass@1",
+            "num": 30,
+            "score": 0.0797,
+            "macro_score": 0.0797,
+            "categories": [
+                {
+                    "name": [
+                        "default"
+                    ],
+                    "num": 30,
+                    "score": 0.0797,
+                    "macro_score": 0.0797,
+                    "subsets": [
+                        {
+                            "name": "default",
+                            "score": 0.0797,
+                            "num": 30,
+                            "num_response_per_row": 64
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "TopK",
+            "num": 30,
+            "score": 0.3667,
+            "macro_score": 0.3667,
+            "categories": [
+                {
+                    "name": [
+                        "default"
+                    ],
+                    "num": 30,
+                    "score": 0.3667,
+                    "macro_score": 0.3667,
+                    "subsets": [
+                        {
+                            "name": "default",
+                            "score": 0.3667,
+                            "num": 30,
+                            "num_response_per_row": 64
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -31,7 +31,8 @@ def scan_for_report_folders(root_path):
         return []
 
     reports = []
-    # Iterate over all folders in the root path
+    # Iterate over all folders in the root path 
+    
     for folder in glob.glob(os.path.join(root_path, '*')):
         # Check if reports folder exists
         reports_path = os.path.join(folder, OutputsStructure.REPORTS_DIR)

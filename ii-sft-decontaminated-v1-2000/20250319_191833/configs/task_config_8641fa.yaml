@@ -1,0 +1,115 @@
+api_key: EMPTY
+api_url: http://0.0.0.0:1234/v1
+chat_template: null
+dataset_args:
+  aime25_full:
+    few_shot_num: 0
+  ii_math_entrance_exam:
+    dataset_hub: huggingface
+    dataset_id: Intelligent-Internet/Math-Bench-final
+    eval_split: train
+    extra_params: {}
+    few_shot_num: 0
+    few_shot_random: false
+    filters: null
+    metric_list:
+    - AveragePass@1
+    - TopK
+    model_adapter: generation
+    name: ii_math_entrance_exam
+    output_types:
+    - generation
+    pretty_name: II Math Entrance Exam
+    prompt_template: '{query}
+
+      Please reason step by step, and put your final answer within \boxed{{}}.'
+    query_template: null
+    subset_list:
+    - default
+    system_prompt: null
+    train_split: null
+  math_gakao_en:
+    dataset_hub: huggingface
+    dataset_id: tuenguyen/eval_math_gaokao2023en
+    eval_split: train
+    extra_params: {}
+    few_shot_num: 0
+    few_shot_random: false
+    filters: null
+    metric_list:
+    - AveragePass@1
+    - TopK
+    model_adapter: generation
+    name: math_gakao_en
+    output_types:
+    - generation
+    pretty_name: Math Gakao EN
+    prompt_template: '{query}
+
+      Please reason step by step, and put your final answer within \boxed{{}}.'
+    query_template: null
+    subset_list:
+    - default
+    system_prompt: null
+    train_split: null
+  minerva_math:
+    dataset_hub: huggingface
+    dataset_id: tuenguyen/eval_math_minerva_math
+    eval_split: train
+    extra_params: {}
+    few_shot_num: 0
+    few_shot_random: false
+    filters: null
+    metric_list:
+    - AveragePass@1
+    - TopK
+    model_adapter: generation
+    name: minerva_math
+    output_types:
+    - generation
+    pretty_name: Minerva Math
+    prompt_template: '{query}
+
+      Please reason step by step, and put your final answer within \boxed{{}}.'
+    query_template: null
+    subset_list:
+    - default
+    system_prompt: null
+    train_split: null
+dataset_dir: /home/slurm/.cache/modelscope/hub/datasets
+dataset_hub: modelscope
+datasets:
+- minerva_math
+- math_gakao_en
+- ii_math_entrance_exam
+debug: false
+dry_run: false
+eval_backend: Native
+eval_batch_size: 64
+eval_config: null
+eval_type: service
+generation_config:
+  max_tokens: 16384
+  n: 8
+  seed: 42
+  temperature: 0.6
+  top_k: 40
+  top_p: 0.95
+judge_model_args: {}
+judge_strategy: auto
+judge_worker_num: 8
+limit: null
+mem_cache: false
+model: ii-sft-decontaminated-v1-2000
+model_args:
+  precision: torch.float16
+  revision: master
+model_id: ii-sft-decontaminated-v1-2000
+outputs: null
+seed: 42
+stage: all
+stream: false
+template_type: null
+timeout: null
+use_cache: null
+work_dir: ii-sft-decontaminated-v1-2000/20250319_191833

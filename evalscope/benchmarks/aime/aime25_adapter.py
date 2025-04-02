@@ -46,4 +46,10 @@ class AIME25Adapter(DataAdapter):
         return result
 
     def match(self, gold: str, pred: str) -> float:
-        return math_equal(pred, gold)
+        correct = 0 
+        try:
+            correct = math_equal(pred, gold)
+
+        except Exception as e:
+            logger.error(f"Error matching {pred} and {gold}: {e}")
+        return correct
