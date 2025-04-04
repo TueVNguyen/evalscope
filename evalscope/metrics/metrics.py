@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Dict, List, Union
 
 
 def mean(arr: list):
-    return np.mean(np.array(arr).flatten())
+    # return np.mean(np.array(arr).flatten())
     if not arr:
         return 0.0
     # print(arr)

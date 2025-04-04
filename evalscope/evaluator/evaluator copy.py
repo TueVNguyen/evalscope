@@ -197,54 +197,54 @@ class Evaluator(object):
 
         eval_batch_size = self.task_cfg.eval_batch_size
         if self.task_cfg.eval_type == EvalType.SERVICE:
-            n = infer_cfg.get("n", 1) 
-            with tqdm(total=int(len(prompts_list) * n), desc=f'Predicting({subset_name}): [{len(prompts_list)} * {n}]={len(prompts_list) * n}') as pbar:
-                with ThreadPoolExecutor(max_workers=eval_batch_size) as executor:
-                    futures = []
-                    
-                    infer_cfg_copy = deepcopy(infer_cfg)
-                    infer_cfg_copy['n'] = 1
-                    index = 0
-                    for input_prompt in prompts_list:
-                        for i in range(n):
-                            futures.append(executor.submit(self._predict, [input_prompt], infer_cfg_copy, index))
-                            index += 1
-  
-                    results_dict = [None for _ in range(len(prompts_list) * n)]
-                    for future in as_completed(futures):
-                        res: List[dict] = future.result()
-                        answer_ds, index = res
-                        results_dict[index] = answer_ds
-                        factor = index // n 
-                        if all([results_dict[i] is not None for i in range(factor * n, (factor + 1) * n)]):
-                            data = self.combine_results(results_dict[factor * n:(factor + 1) * n])
-                            prompt = [
-                                prompts_list[factor]
-                            ]
-                            answer_ds = self._get_answer_with_predict(data, prompt, subset_name, infer_cfg)
-                            answers_list.extend(answer_ds)
-                            dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
-                        
-                        pbar.update(1)
-                    # for index in range(0, len(results_dict), n):
-                    #     data = self.combine_results(results_dict[index:index+n])
-                    #     prompt = [
-                    #         prompts_list[index // n]
-                    #     ]
-                    #     answer_ds = self._get_answer_with_predict(data, prompt, subset_name, infer_cfg)
-                    #     answers_list.extend(answer_ds)
-                    #     dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
-                        
-            # with tqdm(total=len(prompts_list), desc=f'Predicting({subset_name}): ') as pbar:
+            # n = infer_cfg.get("n", 1) 
+            # with tqdm(total=int(len(prompts_list) * n), desc=f'Predicting({subset_name}): [{len(prompts_list)} * {n}]={len(prompts_list) * n}') as pbar:
             #     with ThreadPoolExecutor(max_workers=eval_batch_size) as executor:
             #         futures = []
+                    
+            #         infer_cfg_copy = deepcopy(infer_cfg)
+            #         infer_cfg_copy['n'] = 1
+            #         index = 0
             #         for input_prompt in prompts_list:
-            #             futures.append(executor.submit(self._get_answer, [input_prompt], subset_name, infer_cfg))
+            #             for i in range(n):
+            #                 futures.append(executor.submit(self._predict, [input_prompt], infer_cfg_copy, index))
+            #                 index += 1
+  
+            #         results_dict = [None for _ in range(len(prompts_list) * n)]
             #         for future in as_completed(futures):
-            #             answer_ds: List[dict] = future.result()
-            #             answers_list.extend(answer_ds)
-            #             dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
-            #             pbar.update(len(answer_ds))
+            #             res: List[dict] = future.result()
+            #             answer_ds, index = res
+            #             results_dict[index] = answer_ds
+            #             factor = index // n 
+            #             if all([results_dict[i] is not None for i in range(factor * n, (factor + 1) * n)]):
+            #                 data = self.combine_results(results_dict[factor * n:(factor + 1) * n])
+            #                 prompt = [
+            #                     prompts_list[factor]
+            #                 ]
+            #                 answer_ds = self._get_answer_with_predict(data, prompt, subset_name, infer_cfg)
+            #                 answers_list.extend(answer_ds)
+            #                 dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
+                        
+            #             pbar.update(1)
+            #         # for index in range(0, len(results_dict), n):
+            #         #     data = self.combine_results(results_dict[index:index+n])
+            #         #     prompt = [
+            #         #         prompts_list[index // n]
+            #         #     ]
+            #         #     answer_ds = self._get_answer_with_predict(data, prompt, subset_name, infer_cfg)
+            #         #     answers_list.extend(answer_ds)
+            #         #     dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
+                        
+            with tqdm(total=len(prompts_list), desc=f'Predicting({subset_name}): ') as pbar:
+                with ThreadPoolExecutor(max_workers=eval_batch_size) as executor:
+                    futures = []
+                    for input_prompt in prompts_list:
+                        futures.append(executor.submit(self._get_answer, [input_prompt], subset_name, infer_cfg))
+                    for future in as_completed(futures):
+                        answer_ds: List[dict] = future.result()
+                        answers_list.extend(answer_ds)
+                        dump_jsonl_data(answer_ds, pred_file_path, dump_mode=DumpMode.APPEND)
+                        pbar.update(len(answer_ds))
 
      
         else:

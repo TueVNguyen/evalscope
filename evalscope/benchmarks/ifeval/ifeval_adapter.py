@@ -41,6 +41,8 @@ class IFEvalAdapter(DataAdapter):
         return input_d
 
     def parse_pred_result(self, result: str, raw_input_d: dict = None, eval_type: str = EvalType.CHECKPOINT) -> str:
+        # if "<think>" in result:
+        #     result = result.split("<think>")[-1].split("</think>")[-1]
         return result
 
     def match(self, gold: Any, pred: Any) -> Dict:

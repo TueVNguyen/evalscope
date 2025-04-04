@@ -17,7 +17,7 @@ logger = get_logger()
     few_shot_num=0,
     train_split=None,
     eval_split='train',  # Only train set is available
-    prompt_template='{query}\n\nPlease reason step by step, and put your final answer within \\\\boxed{{}}.',
+    prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
     dataset_hub=HubType.HUGGINGFACE,
 )
 class AIME24Adapter(DataAdapter):
@@ -55,6 +55,8 @@ class AIME24Adapter(DataAdapter):
         if extract_boxed_result is  None:
             print(f"no boxed result for {result[-50:]}\n--------------------------------")
             return ""
+        # return strip_answer_string()
+        # result = strip_answer_string(extract_answer(result))
         return extract_boxed_result
 
     def match(self, gold: str, pred: str) -> float:

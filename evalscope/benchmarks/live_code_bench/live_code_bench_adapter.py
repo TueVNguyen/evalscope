@@ -19,7 +19,8 @@ logger = get_logger()
         'start_date': None,
         'end_date': None,
         'num_process_evaluate': 1,
-        'timeout': 6
+        'timeout': 6,
+        "sandbox_url": None
     },
     system_prompt=
     'You are an expert Python programmer. You will be given a question (problem specification) and will generate a correct Python program that matches the specification and passes all tests. You will NOT return anything except for the program.',  # noqa: E501
@@ -73,6 +74,30 @@ class LiveCodeBenchAdapter(DataAdapter):
         return result
 
     def match(self, gold: dict, pred: str) -> float:
+    #     print(
+    #         gold
+    #     )
+    # #     evaluation_sample = json.dumps({
+    # #     'inputs': [t['input'] for t in public_test_cases + private_test_cases],
+    # #     'outputs': [t['output'] for t in public_test_cases + private_test_cases],
+    # #     'fn_name': metadata.get('func_name', None),
+    # # })
+    # # item['evaluation_sample'] = evaluation_sample
+    #     verification_info = {
+    #         "answer": {
+    #             "language": "python",
+    #             "test_cases": [
+    #                 {
+    #                     "input": input_test,
+    #                     "output": output_test,
+    #                 }
+    #                 for input_test, output_test in zip(gold['evaluation_sample']['inputs'], gold['evaluation_sample']['outputs'])
+    #             ]
+    #         }
+    #     }
+    #     from ...metrics.sandbox_code.sandbox_code_verify import verify_sandbox_code 
+    #     verify_result = verify_sandbox_code(pred, verification_info)
+    #     return verify_result['score']
         from .evaluate_utils import codegen_metrics
         from .extract_utils import extract_code_generation
 

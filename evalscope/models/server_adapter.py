@@ -61,33 +61,33 @@ class ServerModelAdapter(BaseModelAdapter):
         infer_cfg = infer_cfg or {}
         results = []
         assert len(inputs) == 1, "Server model adapter only supports single input"
-        n = infer_cfg.get('n', 1)
-        if n!=1:
-            # we create multi process here 
+        # n = infer_cfg.get('n', 1)
+        # if n!=1:
+        #     # we create multi process here 
             
-            with ThreadPoolExecutor(max_workers=n) as executor:
-                futures = []
-                infer_cfg_copy = deepcopy(infer_cfg)
-                infer_cfg_copy['n'] = 1
-                for i in range(n):
-                    futures.append(executor.submit(self.process_single_input, inputs[0], infer_cfg_copy))
-                results = [future.result() for future in futures]
-                concate_results = {
-                    "id": results[0]['id'],
-                    "choices": [],
-                    "created": results[0]['created'],
-                    "model": results[0]['model'],
-                    "object": results[0]['object'],
-                    "usage": results[0]['usage']
-                }
-                for result in results:
-                    concate_results['choices'].extend(result['choices'])
-                results = [concate_results]
+        #     with ThreadPoolExecutor(max_workers=n) as executor:
+        #         futures = []
+        #         infer_cfg_copy = deepcopy(infer_cfg)
+        #         infer_cfg_copy['n'] = 1
+        #         for i in range(n):
+        #             futures.append(executor.submit(self.process_single_input, inputs[0], infer_cfg_copy))
+        #         results = [future.result() for future in futures]
+        #         concate_results = {
+        #             "id": results[0]['id'],
+        #             "choices": [],
+        #             "created": results[0]['created'],
+        #             "model": results[0]['model'],
+        #             "object": results[0]['object'],
+        #             "usage": results[0]['usage']
+        #         }
+        #         for result in results:
+        #             concate_results['choices'].extend(result['choices'])
+        #         results = [concate_results]
 
-        else:
-            for input_item in inputs:
-                response = self.process_single_input(input_item, infer_cfg)
-                results.append(response)
+        # else:
+        for input_item in inputs:
+            response = self.process_single_input(input_item, infer_cfg)
+            results.append(response)
 
         return results
 
@@ -160,7 +160,7 @@ class ServerModelAdapter(BaseModelAdapter):
             parsed_request = self._parse_extra_params(request_json)
             response = self.client.chat.completions.create(**parsed_request)
 
-            if response and self.stream:
+            if response and request_json.get('stream', self.stream):
                 response = self._collect_stream_response(response)
 
             return response.model_dump(exclude_unset=True)

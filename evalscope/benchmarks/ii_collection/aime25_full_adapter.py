@@ -17,7 +17,7 @@ logger = get_logger()
     few_shot_num=0,
     train_split=None,
     eval_split='train',  # Only train set is available
-    prompt_template='{query}\n\nPlease reason step by step, and put your final answer within \\\\boxed{{}}.',
+    prompt_template='{query}\nPlease reason step by step, and put your final answer within \\boxed{{}}.',
     dataset_hub=HubType.HUGGINGFACE,
 )
 class AIME25Adapter(DataAdapter):

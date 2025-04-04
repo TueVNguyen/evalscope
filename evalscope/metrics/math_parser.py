@@ -264,9 +264,9 @@ def extract_answer(pred_str, use_last_number=True):
         # minerva_math
         tmp = pred_str.split('final answer is $', 1)[1]
         pred = tmp.split('$. I hope', 1)[0].strip()
-    elif 'oxed' in pred_str: # sometimes model output is like this: oxed{...} due to prompt \boxed{...}
+    elif 'boxed' in pred_str: # sometimes model output is like this: oxed{...} due to prompt \boxed{...}
         
-        ans = pred_str.split('oxed')[-1]
+        ans = pred_str.split('boxed')[-1]
         if len(ans) == 0:
             return ''
         elif ans[0] == '{':
